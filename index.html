@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運動攀登設施查詢系統</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Awesome Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <style>
+        .element-hidden {
+            display: none !important;
+        }
+        /* Reset & Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            min-height: 100vh;
+            padding: 16px;
+            color: #1f2937;
+        }
+        /* Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100vh;
+        }
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .header h1 {
+            color: #111827;
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header .subtitle {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        .map-section {
+            flex: 0 0 60%;
+        }
+        .data-section {
+            flex: 0 0 40%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow-y: auto;
+            max-height: 73vh;
+        }
+        /* Map Section */
+        .map-container {
+            height: 73vh !important;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 16px;
+        }
+        /* Search Box */
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .search-box {
+            width: 100%;
+            padding: 12px 20px;
+            padding-left: 45px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        /* Data Section Styles */
+        .data-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .data-header h2 {
+            color: #111827;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .data-header .subtitle {
+            color: #6b7280;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .data-stats {
+            display: flex;
+            justify-content: space-around;
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #3b82f6;
+            display: block;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+        .accordion-container {
+            margin-top: 20px;
+        }
+        .facility-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .facility-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .facility-header {
+            background: #10b981;
+            color: white;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .facility-header.active {
+            background: #f59e0b;
+            color: black;
+        }
+        .facility-header i {
+            transition: transform 0.3s ease;
+        }
+        .facility-header.collapsed i {
+            transform: rotate(-90deg);
+        }
+        .facility-content {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+            width: 120px;
+            flex-shrink: 0;
+        }
+        .info-value {
+            flex: 1;
+            color: #6b7280;
+            word-break: break-word;
+        }
+        .info-value a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+        }
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        /* Facility specific styles */
+        .facility-icon {
+            color: #3b82f6;
+            margin-right: 8px;
+        }
+        .type-badge {
+            background: #f59e0b;
+            color: black;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        .type-badge.active {
+            background: #10b981 !important;
+            color: white !important;
+        }
+        /* Marker styles */
+        .facility-marker {
+            background: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .facility-marker.selected {
+            background: #ef4444;
+            width: 20px;
+            height: 20px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+        /* Filter Buttons */
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        .filter-btn {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .filter-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        .filter-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.875rem;
+            padding: 20px;
+            margin-top: auto;
+        }
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+                background: #1e40af;
+            }
+            .container {
+                gap: 16px;
+            }
+            .header {
+                padding: 16px;
+                border-radius: 12px;
+            }
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            .main-content {
+                flex-direction: column;
+            }
+            .map-section,
+            .data-section {
+                flex: 1 1 100%;
+                width: 100%;
+            }
+            .map-container {
+                height: 400px;
+                border-radius: 12px;
+            }
+            .data-section {
+                max-height: 400px;
+                padding: 15px;
+            }
+            .data-header h2 {
+                font-size: 1.3rem;
+            }
+            .stat-value {
+                font-size: 1.5rem;
+            }
+            .info-row {
+                flex-direction: column;
+                margin-bottom: 15px;
+            }
+            .info-label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            .facility-header {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+            .filter-container {
+                flex-direction: column;
+            }
+        }
+        /* Desktop Enhancements */
+        @media (min-width: 1200px) {
+            .map-container {
+                height: 600px;
+            }
+        }
+        /* Leaflet Customizations */
+        .leaflet-control-layers {
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+        /* Smooth Transitions */
+        * {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>運動攀登設施查詢系統</h1>
+            <p class="subtitle">香港康樂及文化事務署設施地點及詳細資訊查詢系統</p>
+        </header>
+        <main class="main-content">
+            <section class="map-section">
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </section>
+            <section class="data-section">
+                <div class="data-header">
+                    <h2>康文署設施列表</h2>
+                    <p class="subtitle">點擊設施名稱查看更多詳細資訊</p>
+                </div>
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="search-input" class="search-box" placeholder="搜尋設施名稱、地區或類型...">
+                </div>
+                <div class="filter-container" id="filter-container">
+                    <!-- Filter buttons will be generated here -->
+                </div>
+                <div class="data-stats">
+                    <div class="stat-item">
+                        <span id="total-facilities" class="stat-value">0</span>
+                        <span class="stat-label">設施總數</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="total-districts" class="stat-value">0</span>
+                        <span class="stat-label">地區數目</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="total-categories" class="stat-value">0</span>
+                        <span class="stat-label">設施種類</span>
+                    </div>
+                </div>
+                <div class="accordion-container" id="accordion-container">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>正在加載康文署設施資料...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer class="footer">
+            <p>康文署設施地點 | 資料來源: 康樂及文化事務署 | 支援桌面及流動裝置</p>
+        </footer>
+    </div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        const PROXY_URL = "https://cors-anywhere.herokuapp.com/";
+        // 定義數據源 - 康文署設施資料
+        const DATA_SOURCE_URL = `${PROXY_URL}https://www.lcsd.gov.hk/datagovhk/facility/facility-scf.json`;
+        
+        // 全局變量
+        let map;
+        let allFacilities = [];
+        let filteredFacilities = [];
+        let markersLayer = L.layerGroup();
+        let selectedMarker = null;
+        let totalFacilities = 0;
+        let totalDistricts = 0;
+        let totalCategories = 0;
+        
+        // 設施類型圖標對應
+        const facilityIcons = {
+            'swimming_pool': 'fas fa-swimmer',
+            'sports_centre': 'fas fa-running',
+            'playground': 'fas fa-child',
+            'library': 'fas fa-book',
+            'museum': 'fas fa-landmark',
+            'sports_ground': 'fas fa-futbol',
+            'swimming_pools': 'fas fa-swimmer',
+            'parks_gardens': 'fas fa-tree',
+            'cultural_venues': 'fas fa-theater-masks',
+            'community_halls': 'fas fa-users',
+            'climbing_wall': 'fas fa-mountain',
+            'default': 'fas fa-map-marker-alt'
+        };
+        
+        // 設施類型顏色對應
+        const facilityColors = {
+            'swimming_pool': '#3b82f6',
+            'sports_centre': '#10b981',
+            'playground': '#f59e0b',
+            'library': '#8b5cf6',
+            'museum': '#ef4444',
+            'sports_ground': '#06b6d4',
+            'swimming_pools': '#3b82f6',
+            'parks_gardens': '#10b981',
+            'cultural_venues': '#8b5cf6',
+            'community_halls': '#f59e0b',
+            'climbing_wall': '#ec4899',
+            'default': '#6b7280'
+        };
+        
+        // 初始化地圖配置 - 以香港為中心
+        const MAP_CONFIG = {
+            center: [22.3193, 114.1694], // 香港中心點
+            zoom: 12
+        };
+        
+        // 初始化應用
+        document.addEventListener('DOMContentLoaded', function () {
+            initMap();
+            loadFacilityData();
+            
+            // 設置搜尋功能
+            document.getElementById('search-input').addEventListener('input', function(e) {
+                searchFacilities(e.target.value);
+            });
+        });
+        
+        function initMap() {
+            // 初始化地圖
+            map = L.map('map', {
+                zoomControl: true,
+                attributionControl: true
+            }).setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+            
+            // 添加地圖圖層
+            const tileLayers = {
+                "開放街道地圖": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap',
+                    maxZoom: 19,
+                    subdomains: ['a', 'b', 'c']
+                }),
+                "衛星圖像": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: '© Esri',
+                    maxZoom: 19
+                }),
+                "地形圖": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenTopoMap',
+                    maxZoom: 17
+                })
+            };
+            
+            tileLayers["開放街道地圖"].addTo(map);
+            
+            // 添加圖層控制
+            L.control.layers(tileLayers, null, {
+                collapsed: true,
+                position: 'topright'
+            }).addTo(map);
+            
+            // 添加標記圖層
+            markersLayer.addTo(map);
+        }
+        
+        async function loadFacilityData() {
+            try {
+                console.log('正在從康文署 API 加載資料...');
+                const response = await fetch(DATA_SOURCE_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('API 回應:', data);
+                
+                if (data && Array.isArray(data) && data.length > 0) {
+                    console.log(`成功加載 ${data.length} 個設施`);
+                    
+                    // 將 JSON 陣列轉換為 GeoJSON 格式
+                    const geojsonFeatures = data.map((facility, index) => {
+                        // 將度分秒座標轉換為十進位度數
+                        let lat = null;
+                        let lng = null;
+                        
+                        if (facility.Latitude && facility.Longitude) {
+                            lat = dmsToDecimal(facility.Latitude);
+                            lng = dmsToDecimal(facility.Longitude);
+                        }
+                        
+                        // 確定設施類型
+                        const facilityType = determineFacilityType(facility);
+                        
+                        return {
+                            type: "Feature",
+                            geometry: {
+                                type: "Point",
+                                coordinates: lng && lat ? [lng, lat] : null
+                            },
+                            properties: {
+                                ...facility,
+                                index: index,
+                                facilityType: facilityType
+                            }
+                        };
+                    }).filter(feature => feature.geometry.coordinates !== null); // 過濾掉沒有座標的設施
+                    
+                    allFacilities = geojsonFeatures;
+                    filteredFacilities = [...allFacilities];
+                    createMarkers(filteredFacilities);
+                    updateStatistics(filteredFacilities);
+                    updateFacilitiesList(filteredFacilities);
+                    createFilterButtons(filteredFacilities);
+                    
+                    // 自動調整地圖視圖以顯示所有標記
+                    const bounds = calculateAllMarkersBounds();
+                    if (bounds) {
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                    
+                    showNotification(`成功加載 ${allFacilities.length} 個康文署設施資料`, 'success');
+                } else {
+                    console.error('API 回應中沒有設施資料或格式不正確');
+                    document.getElementById('accordion-container').innerHTML =
+                        '<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>未找到康文署設施資料</p></div>';
+                    showNotification('API 回應中沒有設施資料或格式不正確', 'error');
+                }
+            } catch (error) {
+                console.error('加載數據時出錯:', error);
+                document.getElementById('accordion-container').innerHTML =
+                    '<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>加載數據時出錯</p></div>';
+                showNotification(`加載數據時出錯: ${error.message}。請檢查 CORS Anywhere 代理伺服器是否需要啟用權限。`, 'error');
+                // 顯示啟用 CORS Anywhere 的提示
+                setTimeout(() => {
+                    alert('注意：由於 CORS 限制，需要啟用 CORS Anywhere 代理伺服器。\n\n請訪問以下連結啟用權限：\nhttps://cors-anywhere.herokuapp.com/corsdemo');
+                }, 1000);
+            }
+        }
+        
+        // 將度分秒轉換為十進位度數
+        function dmsToDecimal(dmsString) {
+            if (!dmsString) return null;
+            
+            try {
+                // 格式: "22-17-5" 或 "114-13-20"
+                const parts = dmsString.split('-');
+                if (parts.length !== 3) return null;
+                
+                const degrees = parseFloat(parts[0]);
+                const minutes = parseFloat(parts[1]);
+                const seconds = parseFloat(parts[2]);
+                
+                if (isNaN(degrees) || isNaN(minutes) || isNaN(seconds)) return null;
+                
+                return degrees + (minutes / 60) + (seconds / 3600);
+            } catch (error) {
+                console.error('轉換座標時出錯:', error, dmsString);
+                return null;
+            }
+        }
+        
+        // 根據設施資訊確定類型
+        function determineFacilityType(facility) {
+            const nameEn = facility.Name_en || '';
+            const nameCn = facility.Name_cn || '';
+            const introEn = facility.Intro_en || '';
+            const introCn = facility.Intro_cn || '';
+            const typeCode = facility.Types || '';
+            
+            const text = (nameEn + ' ' + nameCn + ' ' + introEn + ' ' + introCn).toLowerCase();
+            
+            if (typeCode === 'I' && text.includes('climbing')) {
+                return 'climbing_wall';
+            }
+            if (text.includes('swim') || text.includes('pool') || text.includes('游泳池')) {
+                return 'swimming_pool';
+            }
+            if (text.includes('sports centre') || text.includes('sports center') || text.includes('體育館') || text.includes('體育中心')) {
+                return 'sports_centre';
+            }
+            if (text.includes('playground') || text.includes('遊樂場')) {
+                return 'playground';
+            }
+            if (text.includes('library') || text.includes('圖書館')) {
+                return 'library';
+            }
+            if (text.includes('museum') || text.includes('博物館')) {
+                return 'museum';
+            }
+            if (text.includes('sports ground') || text.includes('運動場') || text.includes('stadium')) {
+                return 'sports_ground';
+            }
+            if (text.includes('park') || text.includes('garden') || text.includes('公園') || text.includes('花園')) {
+                return 'parks_gardens';
+            }
+            if (text.includes('cultural') || text.includes('art') || text.includes('文化') || text.includes('藝術')) {
+                return 'cultural_venues';
+            }
+            if (text.includes('community') || text.includes('hall') || text.includes('社區') || text.includes('會堂')) {
+                return 'community_halls';
+            }
+            
+            return 'default';
+        }
+        
+        function calculateAllMarkersBounds() {
+            let bounds = null;
+            markersLayer.eachLayer(function (layer) {
+                if (layer.getLatLng) {
+                    const latLng = layer.getLatLng();
+                    if (bounds) {
+                        bounds.extend(latLng);
+                    } else {
+                        bounds = L.latLngBounds([latLng, latLng]);
+                    }
+                }
+            });
+            return bounds;
+        }
+        
+        function createMarkers(facilities) {
+            markersLayer.clearLayers();
+            
+            facilities.forEach(feature => {
+                const properties = feature.properties;
+                const geometry = feature.geometry;
+                
+                if (geometry && geometry.coordinates) {
+                    const [lng, lat] = geometry.coordinates;
+                    
+                    if (lat && lng) {
+                        // 根據康文署 API 提取屬性
+                        const nameZh = properties.Name_cn || properties.Name_en || '未命名';
+                        const districtZh = properties.District_cn || properties.District_en || '未提供';
+                        const facilityType = properties.facilityType || 'default';
+                        
+                        // 確定設施類型和顏色
+                        const iconColor = facilityColors[facilityType] || facilityColors['default'];
+                        const iconClass = facilityIcons[facilityType] || facilityIcons['default'];
+                        
+                        // 創建自定義標記
+                        const markerIcon = L.divIcon({
+                            className: 'facility-marker',
+                            html: `<i class="${iconClass}" style="color: white; font-size: 10px; position: relative; top: 3px; left: 3px;"></i>`,
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 16],
+                            popupAnchor: [0, -16]
+                        });
+                        
+                        const marker = L.marker([lat, lng], {
+                            icon: markerIcon,
+                            id: properties.index
+                        });
+                        
+                        marker.properties = properties;
+                        marker.facilityType = facilityType;
+                        marker.district = districtZh;
+                        marker.bindPopup(createPopupContent(properties, lat, lng));
+                        
+                        // 點擊事件
+                        marker.on('click', function () {
+                            if (selectedMarker) {
+                                selectedMarker.setIcon(L.divIcon({
+                                    className: 'facility-marker',
+                                    html: `<i class="${getFacilityIcon(selectedMarker.facilityType)}" style="color: white; font-size: 10px; position: relative; top: 3px; left: 3px;"></i>`,
+                                    iconSize: [16, 16],
+                                    iconAnchor: [8, 16],
+                                    popupAnchor: [0, -16]
+                                }));
+                            }
+                            
+                            // 設置當前選中的標記樣式
+                            marker.setIcon(L.divIcon({
+                                className: 'facility-marker selected',
+                                html: `<i class="${iconClass}" style="color: white; font-size: 12px; position: relative; top: 4px; left: 4px;"></i>`,
+                                iconSize: [20, 20],
+                                iconAnchor: [10, 20],
+                                popupAnchor: [0, -20]
+                            }));
+                            
+                            selectedMarker = marker;
+                            
+                            // 打開彈出視窗
+                            marker.openPopup();
+                            
+                            // 調整地圖視圖到標記位置
+                            map.setView([lat, lng], 15, { animate: true });
+                            
+                            // 顯示詳細信息並滾動到對應位置
+                            highlightFacility(marker.id);
+                        });
+                        
+                        markersLayer.addLayer(marker);
+                    }
+                }
+            });
+        }
+        
+        function getFacilityIcon(facilityType) {
+            return facilityIcons[facilityType] || facilityIcons['default'];
+        }
+        
+        function createPopupContent(properties, lat, lng) {
+            // 根據康文署 API 提取屬性
+            const nameZh = properties.Name_cn || properties.Name_en || '未命名';
+            const nameEn = properties.Name_en || '';
+            const addressZh = properties.Address_cn || properties.Address_en || '未提供';
+            const districtZh = properties.District_cn || properties.District_en || '未提供';
+            const phone = properties.Phone || '未提供';
+            const openingHours = properties.Opening_hours_cn || properties.Opening_hours_en || '未提供';
+            
+            return `
+        <div style="max-width: 300px; padding: 10px;">
+            <h3 style="margin: 0 0 10px 0; color: #3b82f6;">
+                ${nameZh}
+            </h3>
+            ${districtZh ? `<p style="margin: 5px 0;"><strong>地區:</strong> ${districtZh}</p>` : ''}
+            ${addressZh ? `<p style="margin: 5px 0;"><strong>地址:</strong> ${addressZh}</p>` : ''}
+            ${phone ? `<p style="margin: 5px 0;"><strong>電話:</strong> ${phone}</p>` : ''}
+            ${openingHours ? `<p style="margin: 5px 0;"><strong>開放時間:</strong> ${openingHours.replace(/<br\s*\/?>/gi, '<br>')}</p>` : ''}
+        </div>
+    `;
+        }
+        
+        function updateStatistics(facilities) {
+            const districts = new Set();
+            const categories = new Set();
+            
+            facilities.forEach(feature => {
+                const properties = feature.properties;
+                const districtZh = properties.District_cn || properties.District_en || '';
+                const facilityType = properties.facilityType || '';
+                
+                if (districtZh && districtZh !== '未提供') districts.add(districtZh);
+                if (facilityType && facilityType !== 'default') categories.add(facilityType);
+            });
+            
+            totalFacilities = facilities.length;
+            totalDistricts = districts.size;
+            totalCategories = categories.size;
+            
+            document.getElementById('total-facilities').textContent = totalFacilities;
+            document.getElementById('total-districts').textContent = totalDistricts;
+            document.getElementById('total-categories').textContent = totalCategories;
+        }
+        
+        function createFilterButtons(facilities) {
+            const categories = new Set();
+            const districts = new Set();
+            
+            facilities.forEach(feature => {
+                const properties = feature.properties;
+                const facilityType = properties.facilityType || '';
+                const district = properties.District_cn || properties.District_en || '';
+                
+                if (facilityType && facilityType !== 'default') categories.add(facilityType);
+                if (district && district !== '未提供') districts.add(district);
+            });
+            
+            let filterHTML = '<button class="filter-btn active" onclick="filterFacilities(\'all\')">全部設施</button>';
+            
+            // 添加類別篩選按鈕
+            Array.from(categories).sort().forEach(category => {
+                const categoryName = getCategoryName(category);
+                filterHTML += `<button class="filter-btn" onclick="filterFacilities('category', '${category}')">${categoryName}</button>`;
+            });
+            
+            // 添加地區篩選按鈕
+            Array.from(districts).sort().forEach(district => {
+                filterHTML += `<button class="filter-btn" onclick="filterFacilities('district', '${district}')">${district}</button>`;
+            });
+            
+            document.getElementById('filter-container').innerHTML = filterHTML;
+        }
+        
+        function getCategoryName(categoryType) {
+            const categoryNames = {
+                'swimming_pool': '游泳池',
+                'sports_centre': '體育館',
+                'playground': '遊樂場',
+                'library': '圖書館',
+                'museum': '博物館',
+                'sports_ground': '運動場',
+                'parks_gardens': '公園花園',
+                'cultural_venues': '文化場所',
+                'community_halls': '社區會堂',
+                'climbing_wall': '攀石牆',
+                'default': '其他'
+            };
+            
+            return categoryNames[categoryType] || categoryType;
+        }
+        
+        function filterFacilities(type, value) {
+            // 更新按鈕狀態
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (type === 'all') {
+                filteredFacilities = [...allFacilities];
+            } else if (type === 'category') {
+                filteredFacilities = allFacilities.filter(feature => {
+                    const properties = feature.properties;
+                    const facilityType = properties.facilityType || '';
+                    return facilityType === value;
+                });
+            } else if (type === 'district') {
+                filteredFacilities = allFacilities.filter(feature => {
+                    const properties = feature.properties;
+                    const district = properties.District_cn || properties.District_en || '';
+                    return district === value;
+                });
+            }
+            
+            // 更新地圖標記和列表
+            createMarkers(filteredFacilities);
+            updateStatistics(filteredFacilities);
+            updateFacilitiesList(filteredFacilities);
+            
+            // 自動調整地圖視圖以顯示所有標記
+            const bounds = calculateAllMarkersBounds();
+            if (bounds) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+            
+            showNotification(`顯示 ${filteredFacilities.length} 個設施`, 'info');
+        }
+        
+        function searchFacilities(query) {
+            if (!query.trim()) {
+                filteredFacilities = [...allFacilities];
+            } else {
+                const searchLower = query.toLowerCase();
+                filteredFacilities = allFacilities.filter(feature => {
+                    const properties = feature.properties;
+                    const nameZh = (properties.Name_cn || '').toLowerCase();
+                    const nameEn = (properties.Name_en || '').toLowerCase();
+                    const districtZh = (properties.District_cn || '').toLowerCase();
+                    const districtEn = (properties.District_en || '').toLowerCase();
+                    const addressZh = (properties.Address_cn || '').toLowerCase();
+                    const addressEn = (properties.Address_en || '').toLowerCase();
+                    const introZh = (properties.Intro_cn || '').toLowerCase();
+                    const introEn = (properties.Intro_en || '').toLowerCase();
+                    
+                    return nameZh.includes(searchLower) || 
+                           nameEn.includes(searchLower) ||
+                           districtZh.includes(searchLower) ||
+                           districtEn.includes(searchLower) ||
+                           addressZh.includes(searchLower) ||
+                           addressEn.includes(searchLower) ||
+                           introZh.includes(searchLower) ||
+                           introEn.includes(searchLower);
+                });
+            }
+            
+            // 更新地圖標記和列表
+            createMarkers(filteredFacilities);
+            updateStatistics(filteredFacilities);
+            updateFacilitiesList(filteredFacilities);
+            
+            // 自動調整地圖視圖以顯示所有標記
+            const bounds = calculateAllMarkersBounds();
+            if (bounds) {
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+            
+            // 更新篩選按鈕狀態
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector('.filter-btn').classList.add('active');
+            
+            if (query.trim()) {
+                showNotification(`找到 ${filteredFacilities.length} 個相關設施`, 'info');
+            }
+        }
+        
+        function updateFacilitiesList(facilities) {
+            const container = document.getElementById('accordion-container');
+            
+            if (facilities.length === 0) {
+                container.innerHTML = '<div class="no-data"><i class="fas fa-map-marker-alt"></i><p>未找到相關設施</p></div>';
+                return;
+            }
+            
+            // 按中文名稱排序
+            const sortedFacilities = [...facilities].sort((a, b) => {
+                const nameA = (a.properties.Name_cn || '').toLowerCase();
+                const nameB = (b.properties.Name_cn || '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+            
+            // 生成手風琴HTML
+            let accordionHTML = '';
+            
+            sortedFacilities.forEach((feature, index) => {
+                const properties = feature.properties;
+                
+                // 根據康文署 API 提取屬性
+                const nameZh = properties.Name_cn || properties.Name_en || '未命名';
+                const nameEn = properties.Name_en || '';
+                const addressZh = properties.Address_cn || properties.Address_en || '未提供';
+                const districtZh = properties.District_cn || properties.District_en || '未提供';
+                const phone = properties.Phone || '未提供';
+                const fax = properties.Fax || '';
+                const email = properties.Email || '';
+                const openingHours = properties.Opening_hours_cn || properties.Opening_hours_en || '未提供';
+                const maintenanceDay = properties.Maintenance_day_cn || properties.Maintenance_day_en || '';
+                const hireCharge = properties.Hire_charge_cn || properties.Hire_charge_en || '';
+                const introZh = properties.Intro_cn || properties.Intro_en || '';
+                const facilitiesZh = properties.Facilities_cn || properties.Facilities_en || '';
+                const geometry = feature.geometry;
+                const facilityType = properties.facilityType || 'default';
+                const categoryName = getCategoryName(facilityType);
+                
+                // 獲取坐標
+                let lat = null;
+                let lng = null;
+                if (geometry && geometry.coordinates) {
+                    [lng, lat] = geometry.coordinates;
+                }
+                
+                const coordinates = lat && lng ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '未提供';
+                const iconClass = getFacilityIcon(facilityType);
+                
+                // 移除 HTML 標籤並截斷過長的描述
+                const cleanIntro = introZh.replace(/<[^>]*>/g, '').substring(0, 200) + (introZh.length > 200 ? '...' : '');
+                const cleanFacilities = facilitiesZh.replace(/<[^>]*>/g, '').substring(0, 150) + (facilitiesZh.length > 150 ? '...' : '');
+                
+                accordionHTML += `
+                    <div class="facility-item" id="facility-${properties.index}">
+                        <div class="facility-header" onclick="toggleFacility(${properties.index})">
+                            <div>
+                                <i class="${iconClass} facility-icon"></i>
+                                <span>${nameZh}</span>
+                                <span class="type-badge">${categoryName}</span>
+                            </div>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="content-${properties.index}" class="facility-content" style="display: none;">
+                            <div class="info-row">
+                                <div class="info-label">名稱</div>
+                                <div class="info-value">
+                                    <strong>${nameZh}</strong>
+                                    ${nameEn ? `<br/><small>${nameEn}</small>` : ''}
+                                </div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">類別</div>
+                                <div class="info-value">${categoryName}</div>
+                            </div>
+                            <div class="info-row">
+                                <div class="info-label">地區</div>
+                                <div class="info-value">${districtZh}</div>
+                            </div>
+                            ${addressZh ? `
+                            <div class="info-row">
+                                <div class="info-label">地址</div>
+                                <div class="info-value">${addressZh}</div>
+                            </div>` : ''}
+                            ${cleanIntro ? `
+                            <div class="info-row">
+                                <div class="info-label">簡介</div>
+                                <div class="info-value">${cleanIntro}</div>
+                            </div>` : ''}
+                            ${cleanFacilities ? `
+                            <div class="info-row">
+                                <div class="info-label">設施</div>
+                                <div class="info-value">${cleanFacilities}</div>
+                            </div>` : ''}
+                            ${openingHours ? `
+                            <div class="info-row">
+                                <div class="info-label">開放時間</div>
+                                <div class="info-value">${openingHours.replace(/<br\s*\/?>/gi, '<br>')}</div>
+                            </div>` : ''}
+                            ${maintenanceDay ? `
+                            <div class="info-row">
+                                <div class="info-label">保養日</div>
+                                <div class="info-value">${maintenanceDay.replace(/<br\s*\/?>/gi, '<br>')}</div>
+                            </div>` : ''}
+                            ${phone ? `
+                            <div class="info-row">
+                                <div class="info-label">電話</div>
+                                <div class="info-value">${phone}</div>
+                            </div>` : ''}
+                            ${fax ? `
+                            <div class="info-row">
+                                <div class="info-label">傳真</div>
+                                <div class="info-value">${fax}</div>
+                            </div>` : ''}
+                            ${email ? `
+                            <div class="info-row">
+                                <div class="info-label">電郵</div>
+                                <div class="info-value"><a href="mailto:${email}">${email}</a></div>
+                            </div>` : ''}
+                            ${hireCharge ? `
+                            <div class="info-row">
+                                <div class="info-label">租用收費</div>
+                                <div class="info-value">${hireCharge.replace(/<br\s*\/?>/gi, '<br>').substring(0, 300)}${hireCharge.length > 300 ? '...' : ''}</div>
+                            </div>` : ''}
+                            <div class="info-row">
+                                <div class="info-label">地圖座標</div>
+                                <div class="info-value">${coordinates}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = accordionHTML;
+        }
+        
+        function highlightFacility(facilityId) {
+            // 滾動到對應的設施
+            const facilityElement = document.getElementById(`facility-${facilityId}`);
+            if (facilityElement) {
+                // 滾動到元素
+                facilityElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // 展開該設施的詳細信息
+                const content = document.getElementById(`content-${facilityId}`);
+                const header = content.previousElementSibling;
+                const icon = header.querySelector('.fa-chevron-down');
+                
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    if (icon) icon.className = 'fas fa-chevron-up';
+                }
+                
+                // 高亮顯示列表項目
+                facilityElement.style.boxShadow = '0 0 0 2px #3b82f6';
+                facilityElement.style.transition = 'box-shadow 0.3s ease';
+                setTimeout(() => {
+                    facilityElement.style.boxShadow = '';
+                }, 2000);
+            }
+            
+            // 在地圖上高亮對應的標記
+            markersLayer.eachLayer(layer => {
+                if (layer.id === facilityId) {
+                    if (selectedMarker && selectedMarker !== layer) {
+                        const oldIconClass = getFacilityIcon(selectedMarker.facilityType);
+                        selectedMarker.setIcon(L.divIcon({
+                            className: 'facility-marker',
+                            html: `<i class="${oldIconClass}" style="color: white; font-size: 10px; position: relative; top: 3px; left: 3px;"></i>`,
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 16],
+                            popupAnchor: [0, -16]
+                        }));
+                    }
+                    
+                    const iconClass = getFacilityIcon(layer.facilityType);
+                    layer.setIcon(L.divIcon({
+                        className: 'facility-marker selected',
+                        html: `<i class="${iconClass}" style="color: white; font-size: 12px; position: relative; top: 4px; left: 4px;"></i>`,
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 20],
+                        popupAnchor: [0, -20]
+                    }));
+                    
+                    selectedMarker = layer;
+                    return;
+                }
+            });
+        }
+        
+        function toggleFacility(id) {
+            const content = document.getElementById(`content-${id}`);
+            const header = content.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+            
+            if (content.style.display === 'none') {
+                header.classList.add("active");
+                content.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                header.classList.remove("active");
+                content.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            // 移除現有通知
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+            
+            // 創建通知元素
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            // 設定通知樣式
+            Object.assign(notification.style, {
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                backgroundColor: type === 'success' ? '#10b981' : '#3b82f6',
+                color: 'white',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                zIndex: '3000',
+                animation: 'slideIn 0.3s ease-out'
+            });
+            
+            // 添加到文檔
+            document.body.appendChild(notification);
+            
+            // 添加CSS動畫
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // 3秒後移除
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+        
+        // 首次加載顯示教程
+        if (!localStorage.getItem('facilityTutorialShown')) {
+            setTimeout(() => {
+                alert("歡迎使用「運動攀登設施查詢系統」！\n\n• 點擊地圖上的設施標記可查看詳細資訊\n• 點擊列表中的設施名稱可展開/收起詳細資訊\n• 使用搜尋框搜尋特定設施\n• 使用篩選按鈕按類別或地區篩選\n• 可使用左上角圖層控制切換地圖樣式");
+                localStorage.setItem('facilityTutorialShown', 'true');
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
